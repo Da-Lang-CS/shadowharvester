@@ -36,7 +36,7 @@ pub fn handle_sync_commands(cli: &Cli) -> Result<(), String> {
 
                 let client = utils::create_api_client().map_err(|e| format!("Failed to create API client: {}", e))?;
                 let mut total_solved_challenges = 0;
-                let mut total_night_mined = 0;
+                let mut total_night_mined: u64 = 0;
                 let mut index = 0;
 
                 println!("Fetching stats for addresses derived from mnemonic...");
@@ -54,10 +54,10 @@ pub fn handle_sync_commands(cli: &Cli) -> Result<(), String> {
                             }
                             println!(
                                 "Index {}: Address {}, Solved Challenges: {}, Night Mined: {} ({} Star)",
-                                index, address, stats.crypto_receipts, stats.night_allocation / 1000, stats.night_allocation
+                                index, address, stats.crypto_receipts, stats.night_allocation / 1000000, stats.night_allocation
                             );
                             total_solved_challenges += stats.crypto_receipts;
-                            total_night_mined += stats.night_allocation;
+                            total_night_mined += stats.night_allocation as u64;
                         }
                         Err(e) => {
                             eprintln!("Error fetching stats for address at index {}: {}", index, e);
