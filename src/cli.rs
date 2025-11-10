@@ -84,6 +84,10 @@ pub enum Commands {
     /// Commands for inspecting known wallet addresses and derivations.
     #[command(subcommand, author, about = "Inspect known wallet addresses")]
     Wallet(WalletCommands),
+
+    /// Fetches and displays the mining statistics for all derived addresses from a mnemonic.
+    #[command(author, about = "Fetch and display mining statistics for all derived addresses")]
+    FetchOnly,
 }
 
 #[derive(Subcommand, Debug, Clone)]

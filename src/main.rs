@@ -121,7 +121,7 @@ fn main() {
             }
 
             // FIX: Split the OR match into two explicit arms.
-            Commands::Challenge(_) | Commands::Wallet(_) => {
+            Commands::Challenge(_) | Commands::Wallet(_) | Commands::FetchOnly => {
                 // The actual command data (ChallengeCommands or WalletCommands) is handled internally by cli_commands::handle_sync_commands.
                 match cli_commands::handle_sync_commands(&cli) {
                     Ok(_) => println!("\n✅ Command completed successfully."),

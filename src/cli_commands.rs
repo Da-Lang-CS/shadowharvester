@@ -7,6 +7,9 @@ use std::path::PathBuf;
 use std::fs;
 use std::collections::{HashSet, HashMap}; // FIX: Import HashMap
 use crate::data_types::SLED_KEY_FAILED_SOLUTION;
+use crate::api;
+use crate::cardano;
+use crate::utils;
 
 // Key prefixes for SLED to organize data
 const SLED_KEY_CHALLENGE: &str = "challenge";
@@ -26,6 +29,50 @@ pub fn handle_sync_commands(cli: &Cli) -> Result<(), String> {
 
     if let Some(command) = cli.command.clone() {
         match command {
+            Commands::FetchOnly => {
+                let api_url = cli.api_url.as_ref().ok_or("Missing --api-url")?.clone();
+                let mnemonic_file = cli.mnemonic_file.as_ref().ok_or("Missing --mnemonic-file")?.clone();
+                let mnemonic = fs::read_to_string(mnemonic_file).map_err(|e| format!("Failed to read mnemonic file: {}", e))?;
+
+                let client = utils::create_api_client().map_err(|e| format!("Failed to create API client: {}", e))?;
+                let mut total_solved_challenges = 0;
+                let mut total_night_mined = 0;
+                let mut index = 0;
+
+                println!("Fetching stats for addresses derived from mnemonic...");
+                println!("==============================================");
+
+                loop {
+                    let key_pair = cardano::derive_key_pair_from_mnemonic(&mnemonic, cli.mnemonic_account, index);
+                    let address = key_pair.2.to_bech32().unwrap();
+
+                    match api::fetch_statistics(&client, &api_url, &address) {
+                        Ok(stats) => {
+                            if stats.crypto_receipts == 0 && index > 0 { // also check index > 0 to not stop at the very first address if it has no challenges
+                                println!("Stopping at index {} as it has no solved challenges.", index);
+                                break;
+                            }
+                            println!(
+                                "Index {}: Address {}, Solved Challenges: {}, Night Mined: {} ({} Star)",
+                                index, address, stats.crypto_receipts, stats.night_allocation / 1000, stats.night_allocation
+                            );
+                            total_solved_challenges += stats.crypto_receipts;
+                            total_night_mined += stats.night_allocation;
+                        }
+                        Err(e) => {
+                            eprintln!("Error fetching stats for address at index {}: {}", index, e);
+                            break;
+                        }
+                    }
+                    index += 1;
+                }
+
+                println!("==============================================");
+                println!("Total Solved Challenges: {}", total_solved_challenges);
+                println!("Total Night Mined: {} ({} Star)", total_night_mined / 1000000, total_night_mined);
+                println!("==============================================");
+                Ok(())
+            }
             Commands::Challenge(cmd) => {
                 match cmd {
                     ChallengeCommands::List => {
